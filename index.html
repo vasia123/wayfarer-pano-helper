@@ -13,12 +13,12 @@
         pointer-events: none;
       }
       .set-location-button-wrapper {
-        padding: 10px;
+        padding: 10px 0 0;
         text-align: center;
       }
       .set-location-button {
         padding: 0 10px;
-        background-color: #4CAF50; /* Green */
+        background-color: #4caf50; /* Green */
         border: none;
         color: white;
         text-align: center;
@@ -28,12 +28,24 @@
         min-height: 5vh;
         line-height: 20px;
         /* border: 2px solid black; */
+        cursor: pointer;
       }
       .nomination-category-header {
         padding: 10px;
         text-align: center;
         font-weight: bold;
         font-size: 12px;
+      }
+      .container-wide {
+        display: flex;
+        justify-content: space-between;
+        height: 90vh;
+      }
+      .container-wide .half {
+        width: 49%;
+      }
+      .container-wide .nomination-map {
+        height: 100%;
       }
     </style>
   </head>
@@ -43,22 +55,43 @@
         Установить маркер на моё местоположение
       </button>
     </div>
-    <div class="nomination-category-header">
-      Здесь перетаскиванием устанавливается местоположение маркера:
+    <div id="container" class="container">
+      <div class="half">
+        <div class="nomination-category-header">
+          <br />
+          Здесь перетаскиванием устанавливается местоположение маркера:
+        </div>
+        <div id="map" class="nomination-map"></div>
+      </div>
+      <div class="half">
+        <div class="nomination-category-header">
+          Здесь видно - будет ли подхватываться панорама в wayfarer 
+          <br />и где будет на ней маркер:
+        </div>
+        <div id="pano" class="nomination-map prevent-interactions"></div>
+      </div>
     </div>
-    <div id="map" class="nomination-map"></div>
-    <div class="nomination-category-header">
-      Здесь видно - будет ли подхватываться панорама в wayfarer и где будет на ней маркер:
-    </div>
-    <div id="pano" class="nomination-map prevent-interactions"></div>
-    
 
     <script src="https://maps.googleapis.com/maps/api/js?client=gme-nianticinc"></script>
     <script>
+      var onresize = function() {
+        width = document.body.clientWidth;
+        height = document.body.clientHeight;
+        if (width > height) {
+          document.getElementById('container').classList.add("container-wide");
+        } else {
+          document.getElementById('container').classList.remove("container-wide");
+        }
+      }
+      window.addEventListener("resize", onresize);
+      onresize();
       var map;
-      var default_coords = {lat: 44.61865914513468, lng: 40.10605591534423};
+      var default_coords = { lat: 44.61865914513468, lng: 40.10605591534423 };
       var infoWindow = new google.maps.InfoWindow();
-      var placemark = new google.maps.LatLng(default_coords.lat, default_coords.lng);
+      var placemark = new google.maps.LatLng(
+        default_coords.lat,
+        default_coords.lng
+      );
       var mapMarker;
       var panoMap;
       var panoMarker;
@@ -73,7 +106,6 @@
                 lat: position.coords.latitude,
                 lng: position.coords.longitude,
               };
-              console.log(pos);
               // infoWindow.setPosition(pos);
               // infoWindow.setContent('Location found.');
               // infoWindow.open(map);
@@ -114,6 +146,13 @@
           zoom: 20,
           center: placemark,
           mapTypeId: "satellite",
+          panControl: false,
+          zoomControl: true,
+          mapTypeControl: false,
+          scaleControl: true,
+          streetViewControl: false,
+          overviewMapControl: true,
+          rotateControl: true
         };
 
         map = new google.maps.Map(document.getElementById("map"), mapOptions);
@@ -128,7 +167,6 @@
         google.maps.event.addListener(mapMarker, "dragend", function (event) {
           var lat = mapMarker.getPosition().lat();
           var lng = mapMarker.getPosition().lng();
-          console.log(lat + "," + lng); //выводим в консоль браузера новые координаты
           setStreetView(lat, lng);
         });
 
@@ -140,7 +178,6 @@
       function setStreetView(lat, lng) {
         // var lat = nomCtrl.currentNomination.lat;
         // var lng = nomCtrl.currentNomination.lng;
-        console.log("setStreetView", lat, lng);
 
         if (!panoMap) {
           panoMap = new google.maps.Map(document.getElementById("pano"), {
@@ -150,8 +187,14 @@
             },
             mapTypeId: "hybrid",
             zoom: 17,
-            scaleControl: true,
-            scrollwheel: true,
+            panControl: false,
+            zoomControl: false,
+            mapTypeControl: false,
+            scaleControl: false,
+            // streetViewControl: false,
+            overviewMapControl: true,
+            rotateControl: true,
+            fullscreenControl: false
           });
           panoMarker = new google.maps.Marker({
             map: panoMap,
@@ -162,6 +205,10 @@
             title: "title",
           });
           panorama = panoMap.getStreetView();
+          panorama.setOptions({
+            disableDefaultUI: true,
+            enableCloseButton: false
+          });
         } else {
           panoMarker.setPosition(new google.maps.LatLng(lat, lng));
         }
@@ -169,7 +216,6 @@
 
         var d = map.getZoom();
         var e = Math.max(50, 35 * Math.pow(2, 16 - d));
-        console.log("e", e);
 
         client.getPanoramaByLocation(
           {
@@ -178,7 +224,6 @@
           },
           e,
           function (result, status) {
-            console.log(result);
             var point = new google.maps.LatLng(lat, lng);
             if (status === "OK") {
               var oldPoint = point;
