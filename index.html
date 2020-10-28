@@ -122,6 +122,7 @@
     </div>
 
     <script src="https://maps.googleapis.com/maps/api/js?client=gme-nianticinc&libraries=places"></script>
+    <script src="libs/S2.js"></script>
     <script>
       var onresize = function() {
         width = document.body.clientWidth;
@@ -269,6 +270,14 @@
         });
 
         setStreetView(default_coords.lat, default_coords.lng);
+        
+        settings = {
+          revS2Cell: 17,
+          revS2Color: "#00FF00",
+          revSecondS2Cell: 14,
+          revS2SecondColor: "#E47252",
+        }
+        addS2Overlay(map, settings["revS2Cell"], settings["revS2Color"], settings["revSecondS2Cell"], settings["revS2SecondColor"])
       }
 
       google.maps.event.addDomListener(window, "load", initialize);
