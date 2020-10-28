@@ -136,16 +136,14 @@
       window.addEventListener("resize", onresize);
       onresize();
       var map;
-      var default_coords = { lat: 44.61865914513468, lng: 40.10605591534423 };
+      var default_coords = new google.maps.LatLng(44.61865914513468, 40.10605591534423);
       var infoWindow = new google.maps.InfoWindow();
-      var placemark = new google.maps.LatLng(
-        default_coords.lat,
-        default_coords.lng
-      );
+      var placemark = default_coords;
       var mapMarker;
       var panoMap;
       var panoMarker;
       var panorama;
+      var circle;
 
       function setMyLocation() {
         // Try HTML5 geolocation.
@@ -164,7 +162,7 @@
                 position.coords.latitude,
                 position.coords.longitude
               );
-              mapMarker.setPosition(point);
+              setMarkerPosition(point);
               map.panTo(point);
 
               setStreetView(
@@ -194,6 +192,7 @@
       function initialize() {
         var mapOptions = {
           zoom: 20,
+          maxZoom: 23,
           center: placemark,
           mapTypeId: "satellite",
           panControl: false,
@@ -206,6 +205,7 @@
         };
 
         map = new google.maps.Map(document.getElementById("map"), mapOptions);
+        map.setTilt(45);
 
         mapMarker = new google.maps.Marker({
           map: map,
@@ -213,20 +213,44 @@
           animation: google.maps.Animation.DROP, //анимация маркера
           position: placemark,
         });
+        addLowestDistCircle(map, placemark)
+
+        function setMarkerPosition(latLng) {
+          mapMarker.setPosition(latLng)
+          addLowestDistCircle(map, latLng)
+          setStreetView(latLng);
+        }
+        function addLowestDistCircle(gMap, latLng){
+          if (circle) {
+            circle.setMap(null);
+          }
+          circle = new google.maps.Circle({
+            map: gMap,
+            center: latLng,
+            radius: 20,
+            strokeColor: 'red',
+            fillColor: 'red',
+            strokeOpacity: 0.8,
+            strokeWeight: 1,
+            fillOpacity: 0.2
+          });
+          google.maps.event.addListener(circle, 'click', function(ev) {
+            setMarkerPosition(ev.latLng)
+          });
+        }
 
         // действие при перетаскивание маркера
         google.maps.event.addListener(mapMarker, "dragend", function (event) {
           var lat = mapMarker.getPosition().lat();
           var lng = mapMarker.getPosition().lng();
-          setStreetView(lat, lng);
+          setMarkerPosition(mapMarker.getPosition())
         });
 
         // действие при клике по карте
         map.addListener('click',function(event) {
           var lat = event.latLng.lat();
           var lng = event.latLng.lng();
-          mapMarker.setPosition(event.latLng)
-          setStreetView(lat, lng);
+          setMarkerPosition(event.latLng)
         });
 
         // Create the search box and link it to the UI element.
@@ -247,15 +271,12 @@
           }
           // For each place, get the icon, name and location.
           // const bounds = new google.maps.LatLngBounds();
-          console.log(places)
           var place = places[0]
           if (!place.geometry) {
             console.log("Returned place contains no geometry");
             return;
           }
-          console.log(place.geometry.location)
-          mapMarker.setPosition(place.geometry.location)
-          setStreetView(place.geometry.location.lat(), place.geometry.location.lng());
+          setMarkerPosition(place.geometry.location)
 
           // if (place.geometry.viewport) {
           //   // Only geocodes have viewport.
@@ -269,7 +290,8 @@
           map.setZoom(17);
         });
 
-        setStreetView(default_coords.lat, default_coords.lng);
+        setMarkerPosition(default_coords)
+        // setStreetView(default_coords.lat, default_coords.lng);
         
         settings = {
           revS2Cell: 17,
@@ -282,16 +304,13 @@
 
       google.maps.event.addDomListener(window, "load", initialize);
 
-      function setStreetView(lat, lng) {
+      function setStreetView(latLng) {
         // var lat = nomCtrl.currentNomination.lat;
         // var lng = nomCtrl.currentNomination.lng;
 
         if (!panoMap) {
           panoMap = new google.maps.Map(document.getElementById("pano"), {
-            center: {
-              lat: lat,
-              lng: lng,
-            },
+            center: latLng,
             mapTypeId: "hybrid",
             zoom: 17,
             panControl: false,
@@ -305,10 +324,7 @@
           });
           panoMarker = new google.maps.Marker({
             map: panoMap,
-            position: {
-              lat: parseFloat(lat),
-              lng: parseFloat(lng),
-            },
+            position: latLng,
             title: "title",
           });
           panorama = panoMap.getStreetView();
@@ -317,7 +333,7 @@
             enableCloseButton: false
           });
         } else {
-          panoMarker.setPosition(new google.maps.LatLng(lat, lng));
+          panoMarker.setPosition(latLng);
         }
         var client = new google.maps.StreetViewService();
 
@@ -325,13 +341,10 @@
         var e = Math.max(50, 35 * Math.pow(2, 16 - d));
 
         client.getPanoramaByLocation(
-          {
-            lat: lat,
-            lng: lng,
-          },
+          latLng,
           e,
           function (result, status) {
-            var point = new google.maps.LatLng(lat, lng);
+            var point = latLng;
             if (status === "OK") {
               var oldPoint = point;
               point = result.location.latLng;
