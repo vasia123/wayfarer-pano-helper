@@ -201,7 +201,9 @@
           scaleControl: true,
           streetViewControl: false,
           overviewMapControl: true,
-          rotateControl: true
+          rotateControl: true,
+          scrollwheel: true,
+          gestureHandling: 'greedy'
         };
 
         map = new google.maps.Map(document.getElementById("map"), mapOptions);
